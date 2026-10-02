@@ -3,8 +3,8 @@
 #include <WebServer.h>
 
 // Configuration Wi-Fi
-const char* ssid = "CollegeDromeWifi";
-const char* password = "Wifi@Drome26";
+const char* ssid = "************";
+const char* password = "************";
 
 WebServer server(80);
 
