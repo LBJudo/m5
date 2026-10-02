@@ -14,12 +14,12 @@ jobs:
           sudo mv bin/arduino-cli /usr/local/bin/
           arduino-cli config init
           arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          arduino-cli core install esp32:esp32@2.0.14 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli lib install M5Unified
 
       - name: Compile Sketch
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,Scheme=default --output-dir ./build .
+          arduino-cli compile --fqbn esp32:esp32:esp32s3 --output-dir ./build sketch.ino
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
