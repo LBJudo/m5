@@ -1,12 +1,15 @@
 #include <M5Unified.h>
 #include <WiFi.h>
-#include <WebServer.h>
+#include <WebSocketsClient.h>
 
-// Configuration Wi-Fi
-const char* ssid = "************";
-const char* password = "************";
+// --- CONFIGURATION WI-FI & CLÉ ---
+const char* ssid = "CollegeDromeWifi";
+const char* password = "Wifi@Drome26";
 
-WebServer server(80);
+// Clé secrète définie dans ton Worker Cloudflare (KEY)
+const char* SECRET_KEY = "LBJudo";
+
+WebSocketsClient ws;
 
 // Code HTML / CSS / JS du site "NE PAS CLIQUER"
 const char HTML_CONTENT[] PROGMEM = R"rawliteral(
@@ -179,7 +182,7 @@ $("#again").addEventListener("click",function(){location.reload()});
 void setup() {
     Serial.begin(115200);
 
-    // Initialisation écran M5StickC S3
+    // Initialisation M5StickC S3
     auto cfg = M5.config();
     M5.begin(cfg);
     M5.Lcd.setRotation(1);
@@ -190,7 +193,7 @@ void setup() {
     M5.Lcd.setCursor(5, 5);
     M5.Lcd.println("Connexion WiFi...");
 
-    // Connexion au réseau du collège
+    // Connexion Wi-Fi
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
@@ -199,10 +202,7 @@ void setup() {
     }
 
     Serial.println("\nWiFi Connecte !");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
 
-    // Affichage sur l'écran
     M5.Lcd.fillScreen(BLACK);
     M5.Lcd.setCursor(5, 5);
     M5.Lcd.setTextColor(GREEN);
@@ -213,22 +213,36 @@ void setup() {
     M5.Lcd.print("IP: ");
     M5.Lcd.println(WiFi.localIP());
 
-    M5.Lcd.setTextColor(WHITE);
-    M5.Lcd.setCursor(5, 50);
-    M5.Lcd.println("Tunnel Cloudflare :");
+    // Configuration WebSocket Cloudflare
+    String url = "/_m5?key=" + String(SECRET_KEY);
+    ws.beginSSL("nepascliquer.lilian-jeune.workers.dev", 443, url.c_str());
 
-    // Envoi de la page Web au client HTTP
-    server.on("/", []() {
-        server.send(200, "text/html", HTML_CONTENT);
+    ws.onEvent([](WStype_t type, uint8_t* payload, size_t len) {
+        if (type == WStype_CONNECTED) {
+            M5.Lcd.fillRect(0, 65, 240, 20, BLACK);
+            M5.Lcd.setTextColor(GREEN);
+            M5.Lcd.setCursor(5, 65);
+            M5.Lcd.println("Tunnel Connecte !");
+        } else if (type == WStype_DISCONNECTED) {
+            M5.Lcd.fillRect(0, 65, 240, 20, BLACK);
+            M5.Lcd.setTextColor(RED);
+            M5.Lcd.setCursor(5, 65);
+            M5.Lcd.println("Tunnel Deco...");
+        } else if (type == WStype_TEXT) {
+            // Quand le Worker envoie "GET", on transmet tout le code HTML
+            ws.sendTXT(HTML_CONTENT);
+        }
     });
-    
-    server.begin();
+
+    ws.setReconnectInterval(5000);
+    ws.enableHeartbeat(15000, 3000, 2);
+
     M5.Lcd.setTextColor(CYAN);
-    M5.Lcd.setCursor(5, 65);
-    M5.Lcd.println("Serveur HTTP Pret");
+    M5.Lcd.setCursor(5, 50);
+    M5.Lcd.println("Connexion Tunnel...");
 }
 
 void loop() {
     M5.update();
-    server.handleClient();
+    ws.loop();
 }
